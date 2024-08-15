@@ -2,10 +2,10 @@ use anyhow::{Result, anyhow};
 use clap::{App, Arg, ArgMatches};
 
 pub fn get_cli_matches() -> ArgMatches {
-    App::new("WebRTC Echo Server")
+    App::new("Alma-Node")
         .version("1.0")
         .author("Your Name")
-        .about("A simple WebRTC echo server")
+        .about("A simple alma node")
         .arg(
             Arg::with_name("mode")
                 .short('m')
