@@ -18,8 +18,13 @@ lazy_static::lazy_static! {
 }
 
 pub async fn set_peer_connection(pc: Arc<RTCPeerConnection>) {
-    let mut pcm = PEER_CONNECTION.lock().await;
-    *pcm = Some(pc);
+    let mut peer_connection = PEER_CONNECTION.lock().await;
+    *peer_connection = Some(pc);
+}
+
+pub async fn get_peer_connection() -> Option<Arc<RTCPeerConnection>> {
+    let peer_connection = PEER_CONNECTION.lock().await;
+    peer_connection.clone()
 }
 
 pub async fn set_remote_address(addr: String) {
@@ -37,11 +42,20 @@ pub async fn set_data_channel(dc: Arc<RTCDataChannel>) {
     *dcm = Some(dc);
 }
 
-pub async fn add_pending_candidate(candidate: RTCIceCandidateInit) {
-    let mut cs = PENDING_CANDIDATES.lock().await;
-    cs.push(candidate);
+pub async fn get_pending_candidates() -> Vec<RTCIceCandidateInit> {
+    let candidates = PENDING_CANDIDATES.lock().await;
+    candidates.clone()
 }
 
+pub async fn set_pending_candidates(candidates: Vec<RTCIceCandidateInit>) {
+    let mut pending_candidates = PENDING_CANDIDATES.lock().await;
+    *pending_candidates = candidates;
+}
+
+pub async fn add_pending_candidate(candidate: RTCIceCandidateInit) {
+    let mut candidates = PENDING_CANDIDATES.lock().await;
+    candidates.push(candidate);
+}
 
 pub async fn send_request(addr: &str, path: &str, payload: String) -> Result<()> {
     let max_retries = 5;

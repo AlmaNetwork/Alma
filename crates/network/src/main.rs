@@ -1,6 +1,7 @@
 use anyhow::Result;
 use std::net::SocketAddr;
 use std::str::FromStr;
+use std::sync::Arc;
 use tokio::task;
 
 mod config;
@@ -16,13 +17,12 @@ async fn main() -> Result<()> {
     let addr = SocketAddr::from_str(&format!("127.0.0.1:{}", port))?;
     utils::set_remote_address(remote_address.clone()).await;
 
-    let server_task = task::spawn(async move {
-        if let Err(e) = server::start_server(addr).await {
-            eprintln!("Failed to start server: {}", e);
-        }
-    });
-
+    // Initialize PeerConnection
     let peer_connection = webrtc::peer_connection::create_peer_connection().await?;
+    utils::set_peer_connection(Arc::clone(&peer_connection)).await;
+
+    // Start server
+    let server_task = task::spawn(server::start_server(addr));
 
     if mode == "offer" {
         webrtc::peer_connection::handle_offer_mode(&peer_connection, &remote_address).await?;
@@ -36,7 +36,7 @@ async fn main() -> Result<()> {
     utils::console_input_loop().await;
 
     peer_connection.close().await?;
-    server_task.await.map_err(|e| anyhow::anyhow!("Server task error: {}", e))?;
+    server_task.await??;
 
     Ok(())
 }
