@@ -1,0 +1,4 @@
+[network]
+port = "8766"
+mode = "offer"
+remote_address = "127.0.0.1:8765"
