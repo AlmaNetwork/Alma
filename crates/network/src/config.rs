@@ -1,48 +1,44 @@
-use anyhow::{Result, anyhow};
-use clap::{App, Arg, ArgMatches};
+use serde::Deserialize;
+use std::fs;
+use anyhow::{Result, Context};
 
-pub fn get_cli_matches() -> ArgMatches {
-    App::new("Alma-Node")
-        .version("1.0")
-        .author("Your Name")
-        .about("A simple alma node")
-        .arg(
-            Arg::with_name("mode")
-                .short('m')
-                .long("mode")
-                .value_name("MODE")
-                .help("Sets the mode: 'offer' or 'answer'")
-                .required(true)
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("port")
-                .short('p')
-                .long("port")
-                .value_name("PORT")
-                .help("Sets the port number")
-                .default_value("8080")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("remote_address")
-                .short('r')
-                .long("remote-address")
-                .value_name("REMOTE_ADDRESS")
-                .help("Sets the remote address (required for offer mode)")
-                .takes_value(true),
-        )
-        .get_matches()
+#[derive(Deserialize, Default)]
+pub struct NetworkConfig {
+    #[serde(default = "default_port")]
+    pub port: String,
+    #[serde(default = "default_mode")]
+    pub mode: String,
+    #[serde(default = "default_remote_address")]
+    pub remote_address: String,
 }
 
-pub fn parse_cli_args(matches: &ArgMatches) -> Result<(String, String, String)> {
-    let mode = matches.value_of("mode").unwrap().to_string();
-    let port = matches.value_of("port").unwrap().to_string();
-    let remote_address = matches.value_of("remote_address").map(|s| s.to_string()).unwrap_or_default();
+fn default_port() -> String {
+    "8080".to_string()
+}
 
-    if mode == "offer" && remote_address.is_empty() {
-        return Err(anyhow!("Remote address is required for offer mode"));
+fn default_mode() -> String {
+    "answer".to_string()
+}
+
+fn default_remote_address() -> String {
+    "127.0.0.1:8081".to_string()
+}
+
+#[derive(Deserialize)]
+struct Config {
+    network: NetworkConfig,
+}
+
+pub fn load_config(path: &str) -> Result<NetworkConfig> {
+    match fs::read_to_string(path) {
+        Ok(config_str) => {
+            let config: Config = toml::from_str(&config_str)
+                .with_context(|| format!("Failed to parse config file: {}", path))?;
+            Ok(config.network)
+        }
+        Err(_) => {
+            println!("Config file not found. Using default values and command line arguments.");
+            Ok(NetworkConfig::default())
+        }
     }
-
-    Ok((mode, port, remote_address))
 }
