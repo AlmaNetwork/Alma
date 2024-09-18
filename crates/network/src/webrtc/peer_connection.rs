@@ -1,6 +1,5 @@
 use anyhow::Result;
 use std::sync::Arc;
-use tokio::time::sleep;
 use webrtc::api::APIBuilder;
 use webrtc::ice_transport::ice_server::RTCIceServer;
 use webrtc::peer_connection::configuration::RTCConfiguration;
@@ -29,8 +28,6 @@ pub async fn create_peer_connection() -> Result<Arc<RTCPeerConnection>> {
 }
 
 pub async fn handle_offer_mode(peer_connection: &Arc<RTCPeerConnection>, remote_addr: &str) -> Result<()> {
-    sleep(std::time::Duration::from_secs(2)).await;
-
     let data_channel = peer_connection.create_data_channel("data", None).await?;
     data_channel::setup_data_channel_handlers(Arc::clone(&data_channel)).await;
 

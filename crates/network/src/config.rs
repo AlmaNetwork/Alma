@@ -6,18 +6,12 @@ use anyhow::{Result, Context};
 pub struct NetworkConfig {
     #[serde(default = "default_port")]
     pub port: String,
-    #[serde(default = "default_mode")]
-    pub mode: String,
     #[serde(default = "default_remote_address")]
     pub remote_address: String,
 }
 
 fn default_port() -> String {
     "8080".to_string()
-}
-
-fn default_mode() -> String {
-    "answer".to_string()
 }
 
 fn default_remote_address() -> String {

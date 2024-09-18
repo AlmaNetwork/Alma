@@ -8,15 +8,13 @@ use std::net::SocketAddr;
 use std::str::FromStr;
 use tokio::task;
 use clap::Parser;
+use tokio::time::{timeout, Duration};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
     #[arg(short, long)]
     config: Option<String>,
-
-    #[arg(short, long)]
-    mode: Option<String>,
 
     #[arg(short, long)]
     port: Option<String>,
@@ -36,9 +34,6 @@ async fn main() -> Result<()> {
     };
 
     // Command line arguments override config file and default values
-    if let Some(mode) = cli.mode {
-        config.mode = mode;
-    }
     if let Some(port) = cli.port {
         config.port = port;
     }
@@ -47,18 +42,30 @@ async fn main() -> Result<()> {
     }
 
     println!("Using configuration:");
-    println!("Mode: {}", config.mode);
     println!("Port: {}", config.port);
     println!("Remote Address: {}", config.remote_address);
 
-    let addr = SocketAddr::from_str(&format!("127.0.0.1:{}", config.port))?;
+    let local_addr = SocketAddr::from_str(&format!("127.0.0.1:{}", config.port))?;
+    let remote_addr = SocketAddr::from_str(&config.remote_address)?;
     utils::set_remote_address(config.remote_address.clone()).await;
 
     let peer_connection = webrtc::peer_connection::create_peer_connection().await?;
 
-    let server_task = task::spawn(server::start_server(addr));
+    let server_task = task::spawn(server::start_server(local_addr));
 
-    if config.mode == "offer" {
+    // Try to connect to the remote address
+    let is_offer = match timeout(Duration::from_secs(5), tokio::net::TcpStream::connect(remote_addr)).await {
+        Ok(Ok(_)) => {
+            println!("Connected to remote. Operating in Offer mode.");
+            true
+        },
+        _ => {
+            println!("Failed to connect to remote. Operating in Answer mode and waiting for incoming connection.");
+            false
+        }
+    };
+
+    if is_offer {
         webrtc::peer_connection::handle_offer_mode(&peer_connection, &config.remote_address).await?;
     } else {
         webrtc::peer_connection::handle_answer_mode(&peer_connection).await?;
